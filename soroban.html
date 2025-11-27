@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>高機能・そろばん読み上げ算アプリ</title>
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5883631303166555"
+     crossorigin="anonymous"></script>
     <style>
         body {
             font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
@@ -129,10 +132,9 @@
         /* 暗算モード（答え表示前）のスタイル */
         .blind-mode li {
             color: transparent;
-            text-shadow: 0 0 15px rgba(0,0,0,0.1); /* ぼかしだけ残す（オプション） */
+            text-shadow: 0 0 15px rgba(0,0,0,0.1);
             user-select: none;
         }
-        /* 答え表示後はblind-modeクラスを外すので見えるようになる */
 
         #result-area {
             margin-top: 20px;
@@ -160,8 +162,6 @@
             color: #3498db;
         }
     </style>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5883631303166555"
-     crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -224,13 +224,13 @@
                 let optMin = document.createElement('option');
                 optMin.value = i;
                 optMin.text = i + "桁";
-                if(i === 2) optMin.selected = true; // デフォルト最小2桁
+                if(i === 2) optMin.selected = true; 
                 minSel.appendChild(optMin);
 
                 let optMax = document.createElement('option');
                 optMax.value = i;
                 optMax.text = i + "桁";
-                if(i === 3) optMax.selected = true; // デフォルト最大3桁
+                if(i === 3) optMax.selected = true; 
                 maxSel.appendChild(optMax);
             }
         };
@@ -246,13 +246,11 @@
 
         function getJapaneseVoice() {
             const voices = window.speechSynthesis.getVoices();
-            // 優先度: Google 日本語 -> 名前がJPを含む -> 言語がja-JP
             return voices.find(v => v.name === 'Google 日本語') || 
                    voices.find(v => v.lang === 'ja-JP') || null;
         }
         window.speechSynthesis.onvoiceschanged = getJapaneseVoice;
 
-        // 指定された桁数の乱数を生成
         function generateRandomNumber(digits) {
             const min = Math.pow(10, digits - 1);
             const max = Math.pow(10, digits) - 1;
@@ -262,28 +260,23 @@
         function startProblem() {
             if (isReading) return;
 
-            // 入力値の取得
             let minDigits = parseInt(document.getElementById('min-digits').value);
             let maxDigits = parseInt(document.getElementById('max-digits').value);
             const count = parseInt(document.getElementById('count').value);
             const allowSubtraction = document.getElementById('allow-subtraction').checked;
             const isBlindMode = document.getElementById('blind-mode').checked;
 
-            // エラーチェック（最小桁数が最大桁数より大きい場合）
             if (minDigits > maxDigits) {
-                // 入れ替える
                 [minDigits, maxDigits] = [maxDigits, minDigits];
                 document.getElementById('min-digits').value = minDigits;
                 document.getElementById('max-digits').value = maxDigits;
             }
             
-            // UIリセット
             problemNumbers = [];
             totalAnswer = 0;
             const listElement = document.getElementById('problem-list');
             listElement.innerHTML = '';
             
-            // ブラインドモードの適用
             if (isBlindMode) {
                 listElement.className = 'blind-mode';
             } else {
@@ -294,18 +287,14 @@
             document.getElementById('show-answer-btn').style.display = 'none';
             document.getElementById('status-text').innerText = '読み上げ中...';
 
-            // 問題作成ループ
             for (let i = 0; i < count; i++) {
-                // 最小桁〜最大桁の間でランダムに桁数を決める
                 const currentDigits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits;
                 let num = generateRandomNumber(currentDigits);
                 
-                // 引き算ロジック
                 if (allowSubtraction && i > 0 && Math.random() < 0.4) {
                     num = -num;
                 }
                 
-                // 合計がマイナスになりすぎないように調整
                 if (totalAnswer + num < 0) {
                     num = Math.abs(num);
                 }
@@ -313,12 +302,10 @@
                 problemNumbers.push(num);
                 totalAnswer += num;
 
-                // リストに追加
                 const li = document.createElement('li');
-                // 3桁区切りで見やすく
                 if (num < 0) {
                      li.innerText = "▲ " + Math.abs(num).toLocaleString();
-                     li.style.color = "#e74c3c"; // マイナスは赤系（表示時）
+                     li.style.color = "#e74c3c";
                 } else {
                      li.innerText = num.toLocaleString();
                 }
@@ -340,23 +327,18 @@
             const voice = getJapaneseVoice();
             if (voice) u.voice = voice;
 
-            // 読み上げテキスト構築
             let text = "願いましては、";
             let currentSign = 1;
 
             problemNumbers.forEach((num, index) => {
                 const absNum = Math.abs(num);
                 
-                // 読み上げ用の文字列調整
-                // 数字をそのまま読むと「いちにーさん」になることがあるので、
-                // 「円」をつけることで金額読み（千、百）を誘導する
-                
                 if (index === 0) {
                     text += `${absNum}円なり、`;
                 } else {
                     if (num < 0) {
                         if (currentSign === 1) text += `引いては、`;
-                        else text += ``; // 連続マイナスの場合は「引いては」を省略しないのが一般的だが、アプリの仕様として今回は省略せず繋げる
+                        else text += ``; 
                         
                         text += `${absNum}円なり、`;
                         currentSign = -1;
@@ -383,7 +365,6 @@
         }
 
         function showAnswer() {
-            // ブラインドモード解除（隠していた数字を表示）
             document.getElementById('problem-list').classList.remove('blind-mode');
 
             const resultArea = document.getElementById('result-area');
@@ -392,10 +373,9 @@
             
             document.getElementById('status-text').innerText = '正解確認';
 
-            // 答えの読み上げ
             const u = new SpeechSynthesisUtterance();
             u.lang = 'ja-JP';
-            u.rate = parseFloat(document.getElementById('speed').value); // 答えも設定速度で
+            u.rate = parseFloat(document.getElementById('speed').value);
             const voice = getJapaneseVoice();
             if (voice) u.voice = voice;
             

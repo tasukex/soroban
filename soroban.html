@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>そろばん読み上げ算 自動生成アプリ</title>
+    <title>高機能・そろばん読み上げ算アプリ</title>
     <style>
         body {
             font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
@@ -16,6 +16,7 @@
         }
         h1 {
             color: #2c3e50;
+            margin-bottom: 10px;
         }
         .container {
             background: white;
@@ -23,7 +24,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 500px;
+            max-width: 600px;
             text-align: center;
         }
         .settings {
@@ -32,18 +33,41 @@
             gap: 15px;
             margin-bottom: 20px;
             text-align: left;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .setting-group {
+            display: flex;
+            flex-direction: column;
         }
         label {
             font-weight: bold;
             font-size: 0.9em;
+            margin-bottom: 5px;
         }
-        input, select {
+        select, input[type="range"] {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
+            background-color: #fff;
         }
+        .checkbox-group {
+            grid-column: span 2;
+            display: flex;
+            align-items: center;
+            margin-top: 5px;
+            padding: 5px 0;
+            border-top: 1px solid #eee;
+        }
+        .checkbox-group input {
+            width: auto;
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        
         .btn {
             background-color: #3498db;
             color: white;
@@ -55,6 +79,7 @@
             transition: background 0.3s;
             width: 100%;
             margin-bottom: 10px;
+            font-weight: bold;
         }
         .btn:hover {
             background-color: #2980b9;
@@ -65,96 +90,167 @@
         }
         .btn-answer {
             background-color: #27ae60;
+            display: none;
         }
         .btn-answer:hover {
             background-color: #219150;
         }
         
-        #display-area {
-            margin-top: 20px;
-            font-size: 1.5em;
-            font-weight: bold;
-            min-height: 1.5em;
-            color: #e67e22;
+        /* 問題表示エリア */
+        #problem-container {
+            margin: 20px 0;
+            border-top: 2px solid #eee;
+            border-bottom: 2px solid #eee;
+            max-height: 300px;
+            overflow-y: auto;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
         #problem-list {
             list-style: none;
             padding: 0;
-            margin: 20px 0;
-            border-top: 2px solid #eee;
-            border-bottom: 2px solid #eee;
-            max-height: 200px;
-            overflow-y: auto;
-            display: none; /* 最初は隠す */
-        }
-        #problem-list li {
-            padding: 5px 0;
-            border-bottom: 1px dashed #eee;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 1.2em;
+            margin: 0;
+            width: 100%;
         }
         
+        #problem-list li {
+            padding: 8px 0;
+            border-bottom: 1px dashed #eee;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.4em;
+            letter-spacing: 2px;
+            transition: color 0.3s;
+        }
+
+        /* 暗算モード（答え表示前）のスタイル */
+        .blind-mode li {
+            color: transparent;
+            text-shadow: 0 0 15px rgba(0,0,0,0.1); /* ぼかしだけ残す（オプション） */
+            user-select: none;
+        }
+        /* 答え表示後はblind-modeクラスを外すので見えるようになる */
+
         #result-area {
             margin-top: 20px;
-            font-size: 2em;
+            font-size: 2.2em;
             font-weight: bold;
             color: #c0392b;
             display: none;
+            padding: 10px;
+            border: 2px solid #c0392b;
+            border-radius: 8px;
+            background-color: #fff0f0;
         }
+        
         .status {
             font-size: 0.9em;
             color: #7f8c8d;
             margin-bottom: 10px;
+            font-weight: bold;
             height: 1.2em;
+        }
+
+        .speed-value {
+            font-size: 0.8em;
+            float: right;
+            color: #3498db;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>🧮 読み上げ算メーカー</h1>
+        <h1>🧮 読み上げ算マスター</h1>
         
         <div class="settings">
-            <div>
-                <label for="digits">桁数 (1-16)</label>
-                <input type="number" id="digits" value="3" min="1" max="16">
+            <div class="setting-group">
+                <label for="min-digits">最小桁数</label>
+                <select id="min-digits"></select>
             </div>
-            <div>
+            <div class="setting-group">
+                <label for="max-digits">最大桁数</label>
+                <select id="max-digits"></select>
+            </div>
+            <div class="setting-group">
                 <label for="count">口数 (回数)</label>
-                <input type="number" id="count" value="5" min="2" max="20">
+                <select id="count">
+                    <option value="3">3口</option>
+                    <option value="5" selected>5口</option>
+                    <option value="7">7口</option>
+                    <option value="10">10口</option>
+                    <option value="15">15口</option>
+                    <option value="20">20口</option>
+                </select>
             </div>
-            <div style="grid-column: span 2; display: flex; align-items: center;">
-                <input type="checkbox" id="allow-subtraction" style="width: auto; margin-right: 10px;">
+            <div class="setting-group">
+                <label>読み上げ速度 <span id="speed-display" class="speed-value">1.0倍</span></label>
+                <input type="range" id="speed" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateSpeedDisplay()">
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="allow-subtraction">
                 <label for="allow-subtraction">引き算を含める (加減算)</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="blind-mode">
+                <label for="blind-mode">数字を隠す (音声のみで練習)</label>
             </div>
         </div>
 
         <button class="btn" id="start-btn" onclick="startProblem()">問題作成 & 読み上げ開始</button>
         <div class="status" id="status-text"></div>
-        <div id="display-area"></div>
 
-        <ul id="problem-list"></ul>
+        <div id="problem-container">
+            <ul id="problem-list"></ul>
+        </div>
 
-        <button class="btn btn-answer" id="show-answer-btn" onclick="showAnswer()" style="display:none;">答えを表示</button>
+        <button class="btn btn-answer" id="show-answer-btn" onclick="showAnswer()">答えを表示</button>
         <div id="result-area"></div>
     </div>
 
     <script>
+        // 設定値の初期化（プルダウンの生成）
+        window.onload = function() {
+            const minSel = document.getElementById('min-digits');
+            const maxSel = document.getElementById('max-digits');
+            
+            for (let i = 1; i <= 16; i++) {
+                let optMin = document.createElement('option');
+                optMin.value = i;
+                optMin.text = i + "桁";
+                if(i === 2) optMin.selected = true; // デフォルト最小2桁
+                minSel.appendChild(optMin);
+
+                let optMax = document.createElement('option');
+                optMax.value = i;
+                optMax.text = i + "桁";
+                if(i === 3) optMax.selected = true; // デフォルト最大3桁
+                maxSel.appendChild(optMax);
+            }
+        };
+
+        function updateSpeedDisplay() {
+            const val = document.getElementById('speed').value;
+            document.getElementById('speed-display').innerText = parseFloat(val).toFixed(1) + "倍";
+        }
+
         let problemNumbers = [];
         let totalAnswer = 0;
         let isReading = false;
 
-        // 日本語の音声合成を取得
         function getJapaneseVoice() {
             const voices = window.speechSynthesis.getVoices();
-            // Google 日本語, Microsoft Ichiro/Ayumi, その他日本語音声を探す
-            return voices.find(voice => voice.lang === 'ja-JP' || voice.name.includes('JP')) || null;
+            // 優先度: Google 日本語 -> 名前がJPを含む -> 言語がja-JP
+            return voices.find(v => v.name === 'Google 日本語') || 
+                   voices.find(v => v.lang === 'ja-JP') || null;
         }
-
-        // 音声読み上げの初期化（ブラウザのバグ対策で一度空読みさせる場合があるが、今回は簡易実装）
         window.speechSynthesis.onvoiceschanged = getJapaneseVoice;
 
+        // 指定された桁数の乱数を生成
         function generateRandomNumber(digits) {
             const min = Math.pow(10, digits - 1);
             const max = Math.pow(10, digits) - 1;
@@ -164,41 +260,67 @@
         function startProblem() {
             if (isReading) return;
 
-            // 初期化
-            const digits = parseInt(document.getElementById('digits').value);
+            // 入力値の取得
+            let minDigits = parseInt(document.getElementById('min-digits').value);
+            let maxDigits = parseInt(document.getElementById('max-digits').value);
             const count = parseInt(document.getElementById('count').value);
             const allowSubtraction = document.getElementById('allow-subtraction').checked;
+            const isBlindMode = document.getElementById('blind-mode').checked;
+
+            // エラーチェック（最小桁数が最大桁数より大きい場合）
+            if (minDigits > maxDigits) {
+                // 入れ替える
+                [minDigits, maxDigits] = [maxDigits, minDigits];
+                document.getElementById('min-digits').value = minDigits;
+                document.getElementById('max-digits').value = maxDigits;
+            }
             
+            // UIリセット
             problemNumbers = [];
             totalAnswer = 0;
-            document.getElementById('problem-list').innerHTML = '';
-            document.getElementById('problem-list').style.display = 'block';
+            const listElement = document.getElementById('problem-list');
+            listElement.innerHTML = '';
+            
+            // ブラインドモードの適用
+            if (isBlindMode) {
+                listElement.className = 'blind-mode';
+            } else {
+                listElement.className = '';
+            }
+
             document.getElementById('result-area').style.display = 'none';
             document.getElementById('show-answer-btn').style.display = 'none';
             document.getElementById('status-text').innerText = '読み上げ中...';
-            document.getElementById('display-area').innerText = '';
 
-            // 問題作成
+            // 問題作成ループ
             for (let i = 0; i < count; i++) {
-                let num = generateRandomNumber(digits);
+                // 最小桁〜最大桁の間でランダムに桁数を決める
+                const currentDigits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits;
+                let num = generateRandomNumber(currentDigits);
                 
-                // 引き算ロジック (初回は必ずプラス、以降は30%の確率でマイナス)
+                // 引き算ロジック
                 if (allowSubtraction && i > 0 && Math.random() < 0.4) {
                     num = -num;
                 }
                 
-                // 合計がマイナスになりすぎないように調整（簡易的）
+                // 合計がマイナスになりすぎないように調整
                 if (totalAnswer + num < 0) {
-                    num = Math.abs(num); // プラスに戻す
+                    num = Math.abs(num);
                 }
 
                 problemNumbers.push(num);
                 totalAnswer += num;
 
-                // 画面表示用リスト（計算中は隠しておきたい場合は display:none でも可）
+                // リストに追加
                 const li = document.createElement('li');
-                li.innerText = num.toLocaleString();
-                document.getElementById('problem-list').appendChild(li);
+                // 3桁区切りで見やすく
+                if (num < 0) {
+                     li.innerText = "▲ " + Math.abs(num).toLocaleString();
+                     li.style.color = "#e74c3c"; // マイナスは赤系（表示時）
+                } else {
+                     li.innerText = num.toLocaleString();
+                }
+                listElement.appendChild(li);
             }
 
             readAloud();
@@ -207,71 +329,74 @@
         function readAloud() {
             isReading = true;
             document.getElementById('start-btn').disabled = true;
+            const speedRate = parseFloat(document.getElementById('speed').value);
 
             const u = new SpeechSynthesisUtterance();
             u.lang = 'ja-JP';
-            u.rate = 1.0; // 読み上げ速度
-            u.pitch = 1.0; // 声の高さ
+            u.rate = speedRate; 
             
-            // 音声の設定
             const voice = getJapaneseVoice();
             if (voice) u.voice = voice;
 
-            // 読み上げテキストの構築
+            // 読み上げテキスト構築
             let text = "願いましては、";
-            let currentSign = 1; // 1: Positive, -1: Negative
+            let currentSign = 1;
 
             problemNumbers.forEach((num, index) => {
                 const absNum = Math.abs(num);
                 
+                // 読み上げ用の文字列調整
+                // 数字をそのまま読むと「いちにーさん」になることがあるので、
+                // 「円」をつけることで金額読み（千、百）を誘導する
+                
                 if (index === 0) {
-                    // 最初の数字
                     text += `${absNum}円なり、`;
                 } else {
                     if (num < 0) {
-                        if (currentSign === 1) {
-                            text += `引いては、${absNum}円なり、`;
-                        } else {
-                            text += `${absNum}円なり、`;
-                        }
+                        if (currentSign === 1) text += `引いては、`;
+                        else text += ``; // 連続マイナスの場合は「引いては」を省略しないのが一般的だが、アプリの仕様として今回は省略せず繋げる
+                        
+                        text += `${absNum}円なり、`;
                         currentSign = -1;
                     } else {
-                        if (currentSign === -1) {
-                            text += `加えて、${absNum}円なり、`;
-                        } else {
-                            text += `${absNum}円なり、`;
-                        }
+                        if (currentSign === -1) text += `加えて、`;
+                        text += `${absNum}円なり、`;
                         currentSign = 1;
                     }
                 }
             });
 
             text += "では。";
-
             u.text = text;
 
-            // 読み上げ終了時の処理
             u.onend = function(event) {
                 isReading = false;
                 document.getElementById('start-btn').disabled = false;
-                document.getElementById('status-text').innerText = '読み上げ終了';
+                document.getElementById('status-text').innerText = '読み上げ終了。計算してください。';
                 document.getElementById('show-answer-btn').style.display = 'inline-block';
             };
 
-            window.speechSynthesis.cancel(); // 既存の読み上げをキャンセル
+            window.speechSynthesis.cancel();
             window.speechSynthesis.speak(u);
         }
 
         function showAnswer() {
+            // ブラインドモード解除（隠していた数字を表示）
+            document.getElementById('problem-list').classList.remove('blind-mode');
+
             const resultArea = document.getElementById('result-area');
             resultArea.innerText = "答え: " + totalAnswer.toLocaleString() + " 円";
             resultArea.style.display = 'block';
             
-            // 答えも読み上げる
+            document.getElementById('status-text').innerText = '正解確認';
+
+            // 答えの読み上げ
             const u = new SpeechSynthesisUtterance();
             u.lang = 'ja-JP';
+            u.rate = parseFloat(document.getElementById('speed').value); // 答えも設定速度で
             const voice = getJapaneseVoice();
             if (voice) u.voice = voice;
+            
             u.text = "ごめいさんです。答えは、" + totalAnswer + "円です。";
             window.speechSynthesis.speak(u);
         }

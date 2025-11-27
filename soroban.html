@@ -129,10 +129,16 @@
             transition: color 0.3s;
         }
 
+        /* マイナスの文字色指定 */
+        li.negative-val {
+            color: #e74c3c;
+        }
+
         /* 暗算モード（答え表示前）のスタイル */
+        /* !important を使用して強制的に透明にします */
         .blind-mode li {
-            color: transparent;
-            text-shadow: 0 0 15px rgba(0,0,0,0.1);
+            color: transparent !important;
+            text-shadow: 0 0 15px rgba(0,0,0,0.15); /* うっすら影だけ残す（行があることはわかるように） */
             user-select: none;
         }
 
@@ -215,7 +221,7 @@
     </div>
 
     <script>
-        // 設定値の初期化（プルダウンの生成）
+        // 設定値の初期化
         window.onload = function() {
             const minSel = document.getElementById('min-digits');
             const maxSel = document.getElementById('max-digits');
@@ -277,6 +283,7 @@
             const listElement = document.getElementById('problem-list');
             listElement.innerHTML = '';
             
+            // クラスの付与（表示・非表示の制御）
             if (isBlindMode) {
                 listElement.className = 'blind-mode';
             } else {
@@ -291,10 +298,12 @@
                 const currentDigits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits;
                 let num = generateRandomNumber(currentDigits);
                 
+                // 引き算ロジック
                 if (allowSubtraction && i > 0 && Math.random() < 0.4) {
                     num = -num;
                 }
                 
+                // 合計がマイナスになりすぎないように調整
                 if (totalAnswer + num < 0) {
                     num = Math.abs(num);
                 }
@@ -305,7 +314,8 @@
                 const li = document.createElement('li');
                 if (num < 0) {
                      li.innerText = "▲ " + Math.abs(num).toLocaleString();
-                     li.style.color = "#e74c3c";
+                     // CSSクラスで色を指定（優先順位の問題を解消するため）
+                     li.classList.add('negative-val');
                 } else {
                      li.innerText = num.toLocaleString();
                 }
@@ -365,6 +375,7 @@
         }
 
         function showAnswer() {
+            // ブラインドモード解除（隠していた数字を表示）
             document.getElementById('problem-list').classList.remove('blind-mode');
 
             const resultArea = document.getElementById('result-area');

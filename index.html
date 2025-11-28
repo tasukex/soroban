@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>高機能・そろばん読み上げ算アプリ</title>
 
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
+
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5883631303166555"
      crossorigin="anonymous"></script>
     <style>
@@ -93,7 +95,8 @@
         }
         .btn-answer {
             background-color: #27ae60;
-            display: none;
+            display: none; /* 初期状態は非表示 */
+            margin-top: 10px;
         }
         .btn-answer:hover {
             background-color: #219150;
@@ -106,7 +109,7 @@
             border-bottom: 2px solid #eee;
             max-height: 300px;
             overflow-y: auto;
-            min-height: 100px;
+            min-height: 50px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -138,12 +141,13 @@
         /* !important を使用して強制的に透明にします */
         .blind-mode li {
             color: transparent !important;
-            text-shadow: 0 0 15px rgba(0,0,0,0.15); /* うっすら影だけ残す（行があることはわかるように） */
+            text-shadow: 0 0 15px rgba(0,0,0,0.15); /* うっすら影だけ残す */
             user-select: none;
         }
 
         #result-area {
-            margin-top: 20px;
+            margin-top: 10px;
+            margin-bottom: 10px;
             font-size: 2.2em;
             font-weight: bold;
             color: #c0392b;
@@ -157,7 +161,7 @@
         .status {
             font-size: 0.9em;
             color: #7f8c8d;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             font-weight: bold;
             height: 1.2em;
         }
@@ -177,17 +181,17 @@
         <div class="settings">
             <div class="setting-group">
                 <label for="min-digits">最小桁数</label>
-                <select id="min-digits"></select>
+                <select id="min-digits" onchange="saveSettings()"></select>
             </div>
             <div class="setting-group">
                 <label for="max-digits">最大桁数</label>
-                <select id="max-digits"></select>
+                <select id="max-digits" onchange="saveSettings()"></select>
             </div>
             <div class="setting-group">
                 <label for="count">口数 (回数)</label>
-                <select id="count">
+                <select id="count" onchange="saveSettings()">
                     <option value="3">3口</option>
-                    <option value="5" selected>5口</option>
+                    <option value="5">5口</option>
                     <option value="7">7口</option>
                     <option value="10">10口</option>
                     <option value="15">15口</option>
@@ -196,33 +200,44 @@
             </div>
             <div class="setting-group">
                 <label>読み上げ速度 <span id="speed-display" class="speed-value">1.0倍</span></label>
-                <input type="range" id="speed" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateSpeedDisplay()">
+                <input type="range" id="speed" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateSpeedDisplay(); saveSettings()">
             </div>
 
             <div class="checkbox-group">
-                <input type="checkbox" id="allow-subtraction">
+                <input type="checkbox" id="allow-subtraction" onchange="saveSettings()">
                 <label for="allow-subtraction">引き算を含める (加減算)</label>
             </div>
             <div class="checkbox-group">
-                <input type="checkbox" id="blind-mode">
+                <input type="checkbox" id="blind-mode" onchange="saveSettings()">
                 <label for="blind-mode">数字を隠す (音声のみで練習)</label>
             </div>
         </div>
 
         <button class="btn" id="start-btn" onclick="startProblem()">問題作成 & 読み上げ開始</button>
+        
         <div class="status" id="status-text"></div>
+
+        <button class="btn btn-answer" id="show-answer-btn" onclick="showAnswer()">答えを表示</button>
+
+        <div id="result-area"></div>
 
         <div id="problem-container">
             <ul id="problem-list"></ul>
         </div>
-
-        <button class="btn btn-answer" id="show-answer-btn" onclick="showAnswer()">答えを表示</button>
-        <div id="result-area"></div>
     </div>
 
     <script>
-        // 設定値の初期化
+        // 設定値のキー
+        const STORAGE_KEY = 'soroban_app_settings_v1';
+
+        // ページの読み込み完了時
         window.onload = function() {
+            initSelectOptions();
+            loadSettings(); // 設定をロード
+        };
+
+        // プルダウンの生成
+        function initSelectOptions() {
             const minSel = document.getElementById('min-digits');
             const maxSel = document.getElementById('max-digits');
             
@@ -230,16 +245,50 @@
                 let optMin = document.createElement('option');
                 optMin.value = i;
                 optMin.text = i + "桁";
-                if(i === 2) optMin.selected = true; 
                 minSel.appendChild(optMin);
 
                 let optMax = document.createElement('option');
                 optMax.value = i;
                 optMax.text = i + "桁";
-                if(i === 3) optMax.selected = true; 
                 maxSel.appendChild(optMax);
             }
-        };
+            
+            // デフォルト値（ロードに失敗した場合用）
+            minSel.value = 2;
+            maxSel.value = 3;
+            document.getElementById('count').value = 5;
+        }
+
+        // 設定を保存する関数
+        function saveSettings() {
+            const settings = {
+                minDigits: document.getElementById('min-digits').value,
+                maxDigits: document.getElementById('max-digits').value,
+                count: document.getElementById('count').value,
+                speed: document.getElementById('speed').value,
+                allowSubtraction: document.getElementById('allow-subtraction').checked,
+                blindMode: document.getElementById('blind-mode').checked
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        }
+
+        // 設定を読み込む関数
+        function loadSettings() {
+            const json = localStorage.getItem(STORAGE_KEY);
+            if (json) {
+                const settings = JSON.parse(json);
+                
+                if (settings.minDigits) document.getElementById('min-digits').value = settings.minDigits;
+                if (settings.maxDigits) document.getElementById('max-digits').value = settings.maxDigits;
+                if (settings.count) document.getElementById('count').value = settings.count;
+                if (settings.speed) {
+                    document.getElementById('speed').value = settings.speed;
+                    updateSpeedDisplay();
+                }
+                if (settings.allowSubtraction !== undefined) document.getElementById('allow-subtraction').checked = settings.allowSubtraction;
+                if (settings.blindMode !== undefined) document.getElementById('blind-mode').checked = settings.blindMode;
+            }
+        }
 
         function updateSpeedDisplay() {
             const val = document.getElementById('speed').value;
@@ -266,6 +315,9 @@
         function startProblem() {
             if (isReading) return;
 
+            // 設定の保存（念の為スタート時にも保存）
+            saveSettings();
+
             let minDigits = parseInt(document.getElementById('min-digits').value);
             let maxDigits = parseInt(document.getElementById('max-digits').value);
             const count = parseInt(document.getElementById('count').value);
@@ -283,13 +335,14 @@
             const listElement = document.getElementById('problem-list');
             listElement.innerHTML = '';
             
-            // クラスの付与（表示・非表示の制御）
+            // クラスの付与
             if (isBlindMode) {
                 listElement.className = 'blind-mode';
             } else {
                 listElement.className = '';
             }
 
+            // 表示リセット
             document.getElementById('result-area').style.display = 'none';
             document.getElementById('show-answer-btn').style.display = 'none';
             document.getElementById('status-text').innerText = '読み上げ中...';
@@ -298,12 +351,10 @@
                 const currentDigits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits;
                 let num = generateRandomNumber(currentDigits);
                 
-                // 引き算ロジック
                 if (allowSubtraction && i > 0 && Math.random() < 0.4) {
                     num = -num;
                 }
                 
-                // 合計がマイナスになりすぎないように調整
                 if (totalAnswer + num < 0) {
                     num = Math.abs(num);
                 }
@@ -314,7 +365,6 @@
                 const li = document.createElement('li');
                 if (num < 0) {
                      li.innerText = "▲ " + Math.abs(num).toLocaleString();
-                     // CSSクラスで色を指定（優先順位の問題を解消するため）
                      li.classList.add('negative-val');
                 } else {
                      li.innerText = num.toLocaleString();
@@ -367,6 +417,7 @@
                 isReading = false;
                 document.getElementById('start-btn').disabled = false;
                 document.getElementById('status-text').innerText = '読み上げ終了。計算してください。';
+                // 読み上げ終了後に「答えを表示」ボタンを表示
                 document.getElementById('show-answer-btn').style.display = 'inline-block';
             };
 
@@ -375,7 +426,7 @@
         }
 
         function showAnswer() {
-            // ブラインドモード解除（隠していた数字を表示）
+            // ブラインドモード解除
             document.getElementById('problem-list').classList.remove('blind-mode');
 
             const resultArea = document.getElementById('result-area');

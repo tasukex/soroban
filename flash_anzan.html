@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>フラッシュ暗算トレーナー</title>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡️</text></svg>">
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5883631303166555"
+     crossorigin="anonymous"></script>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+        
+        /* 設定エリア */
+        .settings {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .full-width {
+            grid-column: span 2;
+        }
+        label {
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        select, input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #fff;
+            font-size: 1em;
+        }
+        
+        /* フラッシュ表示エリア */
+        #flash-screen {
+            background-color: #222;
+            color: #fff;
+            height: 200px; /* 高さ固定 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 4em;
+            font-weight: bold;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            width: 100%;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .btn:hover { background-color: #2980b9; }
+        .btn:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+
+        .btn-answer {
+            background-color: #27ae60;
+            display: none;
+        }
+        .btn-answer:hover { background-color: #219150; }
+
+        #result-area {
+            margin-top: 10px;
+            padding: 15px;
+            font-size: 2em;
+            font-weight: bold;
+            color: #c0392b;
+            background-color: #fff0f0;
+            border: 2px solid #c0392b;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+            height: 1.2em;
+        }
+        
+        /* 履歴表示用 */
+        #history-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+            display: none; /* デフォルト非表示、答え合わせ時に表示 */
+        }
+        #history-list li { display: inline-block; margin: 0 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>⚡️ フラッシュ暗算</h1>
+
+        <div class="settings">
+            <div class="setting-group full-width">
+                <label for="level-select">級・段位を選択 (自動設定)</label>
+                <select id="level-select" onchange="applyPreset()">
+                    <option value="custom">カスタム設定</option>
+                    <option disabled>--- 練習 ---</option>
+                    <option value="practice_easy">練習: 1桁 3口 4秒</option>
+                    <option value="practice_norm">練習: 2桁 3口 4秒</option>
+                    <option disabled>--- 級位 ---</option>
+                    <option value="15kyu">15級 (1桁 3口 3秒)</option>
+                    <option value="10kyu">10級 (1桁 5口 5秒)</option>
+                    <option value="5kyu">5級 (2桁 8口 8秒)</option>
+                    <option value="3kyu">3級 (2桁 10口 8秒)</option>
+                    <option value="1kyu">1級 (3桁 10口 6秒)</option>
+                    <option disabled>--- 段位 ---</option>
+                    <option value="shodan">初段 (3桁 15口 6秒)</option>
+                    <option value="3dan">三段 (3桁 15口 4.5秒)</option>
+                    <option value="5dan">五段 (4桁 15口 5秒)</option>
+                    <option value="10dan">十段 (4桁 15口 2.5秒)</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label for="digits">桁数</label>
+                <input type="number" id="digits" value="1" min="1" max="10" onchange="setCustomMode()">
+            </div>
+            <div class="setting-group">
+                <label for="count">口数 (回数)</label>
+                <input type="number" id="count" value="3" min="2" max="50" onchange="setCustomMode()">
+            </div>
+            <div class="setting-group full-width">
+                <label for="seconds">秒数 (全体の表示時間)</label>
+                <input type="number" id="seconds" value="3" min="1" max="60" step="0.1" onchange="setCustomMode()">
+            </div>
+        </div>
+
+        <button class="btn" id="start-btn" onclick="startFlash()">スタート</button>
+        <div class="status" id="status-text"></div>
+
+        <div id="flash-screen">Ready</div>
+
+        <button class="btn btn-answer" id="show-answer-btn" onclick="showAnswer()">答えを表示</button>
+        
+        <div id="result-area"></div>
+        <ul id="history-list"></ul>
+
+    </div>
+
+    <script>
+        // 設定の保存キー
+        const STORAGE_KEY = 'flash_anzan_settings';
+
+        // プリセットデータ定義
+        const PRESETS = {
+            "practice_easy": { digits: 1, count: 3, seconds: 4 },
+            "practice_norm": { digits: 2, count: 3, seconds: 4 },
+            "15kyu": { digits: 1, count: 3, seconds: 3 },
+            "10kyu": { digits: 1, count: 5, seconds: 5 },
+            "5kyu":  { digits: 2, count: 8, seconds: 8 },
+            "3kyu":  { digits: 2, count: 10, seconds: 8 },
+            "1kyu":  { digits: 3, count: 10, seconds: 6 },
+            "shodan":{ digits: 3, count: 15, seconds: 6 },
+            "3dan":  { digits: 3, count: 15, seconds: 4.5 },
+            "5dan":  { digits: 4, count: 15, seconds: 5 },
+            "10dan": { digits: 4, count: 15, seconds: 2.5 }
+        };
+
+        let problemNumbers = [];
+        let totalAnswer = 0;
+        let isRunning = false;
+        let timeouts = []; // タイマー管理用（キャンセル時に使用）
+
+        window.onload = function() {
+            loadSettings();
+        };
+
+        // プリセット適用
+        function applyPreset() {
+            const level = document.getElementById('level-select').value;
+            if (PRESETS[level]) {
+                const p = PRESETS[level];
+                document.getElementById('digits').value = p.digits;
+                document.getElementById('count').value = p.count;
+                document.getElementById('seconds').value = p.seconds;
+                saveSettings();
+            }
+        }
+
+        // 手動変更時にカスタム扱いにする
+        function setCustomMode() {
+            document.getElementById('level-select').value = "custom";
+            saveSettings();
+        }
+
+        function saveSettings() {
+            const settings = {
+                level: document.getElementById('level-select').value,
+                digits: document.getElementById('digits').value,
+                count: document.getElementById('count').value,
+                seconds: document.getElementById('seconds').value
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            const json = localStorage.getItem(STORAGE_KEY);
+            if (json) {
+                const settings = JSON.parse(json);
+                if (settings.level) document.getElementById('level-select').value = settings.level;
+                if (settings.digits) document.getElementById('digits').value = settings.digits;
+                if (settings.count) document.getElementById('count').value = settings.count;
+                if (settings.seconds) document.getElementById('seconds').value = settings.seconds;
+            }
+        }
+
+        // ランダム数値生成
+        function generateNumber(digits) {
+            const min = Math.pow(10, digits - 1);
+            const max = Math.pow(10, digits) - 1;
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // スタート処理
+        function startFlash() {
+            if (isRunning) return;
+            
+            // 入力取得
+            const digits = parseInt(document.getElementById('digits').value);
+            const count = parseInt(document.getElementById('count').value);
+            const seconds = parseFloat(document.getElementById('seconds').value);
+
+            // 初期化
+            problemNumbers = [];
+            totalAnswer = 0;
+            document.getElementById('result-area').style.display = 'none';
+            document.getElementById('history-list').style.display = 'none';
+            document.getElementById('show-answer-btn').style.display = 'none';
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('status-text').innerText = '準備中...';
+            
+            // 問題作成
+            for(let i=0; i<count; i++){
+                let n = generateNumber(digits);
+                problemNumbers.push(n);
+                totalAnswer += n;
+            }
+
+            // タイミング計算
+            // 1つの数字に割り当てられる合計時間 (ミリ秒)
+            const interval = (seconds * 1000) / count;
+            
+            // 表示時間と空白時間の配分
+            // 視認性を良くするため、表示時間は短くても50msは確保、空白も確保
+            // 基本比率: 表示 70% : 空白 30% くらいが一般的
+            const showTime = Math.max(30, interval * 0.7); 
+            const blankTime = interval - showTime;
+
+            isRunning = true;
+            
+            // カウントダウン開始
+            countdownAndStart(3, interval, showTime);
+        }
+
+        function countdownAndStart(count, interval, showTime) {
+            const screen = document.getElementById('flash-screen');
+            screen.style.fontSize = "4em";
+            
+            if (count > 0) {
+                screen.innerText = count;
+                // 3, 2, 1のカウント音の代わりに視覚的なカウントダウン
+                let t = setTimeout(() => {
+                    countdownAndStart(count - 1, interval, showTime);
+                }, 600); // 0.6秒間隔
+                timeouts.push(t);
+            } else {
+                screen.innerText = "";
+                document.getElementById('status-text').innerText = '表示中...';
+                
+                // 少し待ってから開始
+                let t = setTimeout(() => {
+                    runFlashSequence(0, interval, showTime);
+                }, 500);
+                timeouts.push(t);
+            }
+        }
+
+        function runFlashSequence(index, interval, showTime) {
+            const screen = document.getElementById('flash-screen');
+
+            if (index >= problemNumbers.length) {
+                // 終了
+                screen.innerText = "End";
+                isRunning = false;
+                document.getElementById('start-btn').disabled = false;
+                document.getElementById('status-text').innerText = '終了。計算してください。';
+                document.getElementById('show-answer-btn').style.display = 'inline-block';
+                return;
+            }
+
+            // 数字を表示
+            screen.innerText = problemNumbers[index].toLocaleString();
+            
+            // 桁数に応じてフォントサイズ調整（はみ出し防止）
+            const digits = problemNumbers[index].toString().length;
+            if (digits > 6) screen.style.fontSize = "2.5em";
+            else if (digits > 4) screen.style.fontSize = "3em";
+            else screen.style.fontSize = "4em";
+
+            // 一定時間後に消す
+            let t1 = setTimeout(() => {
+                screen.innerText = ""; // 空白
+                
+                // 次の数字へ
+                let t2 = setTimeout(() => {
+                    runFlashSequence(index + 1, interval, showTime);
+                }, interval - showTime); // 残りの時間が空白時間
+                
+                timeouts.push(t2);
+            }, showTime);
+            
+            timeouts.push(t1);
+        }
+
+        function showAnswer() {
+            const resultArea = document.getElementById('result-area');
+            resultArea.innerText = "答え: " + totalAnswer.toLocaleString();
+            resultArea.style.display = 'block';
+            
+            // 内訳表示（オプション）
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = "出題: " + problemNumbers.join(" + ");
+            historyList.style.display = 'block';
+
+            document.getElementById('status-text').innerText = '正解確認';
+        }
+
+    </script>
+</body>
+</html>
